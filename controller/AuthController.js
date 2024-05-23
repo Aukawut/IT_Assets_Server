@@ -32,7 +32,7 @@ class AuthController {
         } else {
           const UHR_Details = await InstanceUtils.getHRInfomation(username);
 
-          if (UHR_Details) {
+          if (UHR_Details && !UHR_Details.err) {
             const token = InstanceUtils.getToken(UHR_Details.payload); // สร้าง Token ;
 
             // LDAP search operation (Field ที่ต้องการ)
@@ -148,7 +148,7 @@ class AuthController {
           } else {
             res.json({
               err: true,
-              msg: "UHR data is not found!!",
+              msg: "Permission is Denined!",
             });
           }
         }
