@@ -27,5 +27,29 @@ class UserController {
       console.error("Error connecting to SQL Server:", error);
     }
   }
+  async getUsersToForm(req, res) {
+    try {
+      const poolDb = await new sql.ConnectionPool(sqlConfig).connect();
+      const response = await poolDb
+        .request()
+        .query(`SELECT * FROM V_AllUsers ORDER BY FullName ASC`);
+
+      if (response && response.recordset?.length > 0) {
+        poolDb.close(); // ปิด Connection
+        return res.json({
+          err: false,
+          results: response.recordset,
+          status: "Ok",
+        });
+      } else {
+        return res.json({
+          err: true,
+          msg: "User is not found!",
+        });
+      }
+    } catch (error) {
+      console.error("Error connecting to SQL Server:", error);
+    }
+  }
 }
 module.exports = UserController;

@@ -60,6 +60,7 @@ app.delete('/computer/:id',JwtMiddleWareInstance.adminAuthenticateJWT,ComputerIn
 
 //UserRoutes
 app.get('/users',UserInstance.getUsers) ;
+app.get('/usersFormatForm',UserInstance.getUsersToForm) ;
 
 // Auth Route
 app.get('/auth',AuthInstance.authenticateJWT)
