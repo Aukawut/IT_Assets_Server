@@ -14,6 +14,7 @@ const LicenseController = require("./controller/LicenseController");
 const SupplierController = require("./controller/SupplierController");
 const AccessoriesController = require("./controller/AccessoriesController");
 const PartController = require("./controller/PartController");
+const DeliveryController = require("./controller/DeliveryController");
 
 const webTokenMiddleWare = require("./middleware/jwtMiddleWare") ;
 const fileUploadMiddleWare = require("./middleware/FileUploadMiddleware");
@@ -35,6 +36,7 @@ const LicenseInstance = new LicenseController() ;
 const SupplierInstance = new SupplierController() ;
 const AccessoriesInstance = new AccessoriesController() ;
 const PartInstance = new PartController() ;
+const DeliveryInstance = new DeliveryController() ;
 
 
 const JwtMiddleWareInstance = new webTokenMiddleWare() ;
@@ -116,6 +118,9 @@ app.get("/sumary/byPart",JwtMiddleWareInstance.adminAuthenticateJWT,PartInstance
 app.post("/sparePart/add",JwtMiddleWareInstance.adminAuthenticateJWT,PartInstance.addPart)
 app.put("/sparePart/update/:id",JwtMiddleWareInstance.adminAuthenticateJWT,PartInstance.updatePart)
 app.delete("/sparePart/delete/:id",JwtMiddleWareInstance.adminAuthenticateJWT,PartInstance.deletePart)
+
+//Delivery Route
+app.get("/itemDelivery",JwtMiddleWareInstance?.adminAuthenticateJWT,DeliveryInstance.getEquipment)
 
 // Run server backend
 app.listen(PORT, () => {
