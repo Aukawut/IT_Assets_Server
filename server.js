@@ -121,6 +121,7 @@ app.delete("/sparePart/delete/:id",JwtMiddleWareInstance.adminAuthenticateJWT,Pa
 
 //Delivery Route
 app.get("/itemDelivery",JwtMiddleWareInstance?.adminAuthenticateJWT,DeliveryInstance.getEquipment)
+app.get("/documentDelivery/:sn",JwtMiddleWareInstance?.adminAuthenticateJWT,DeliveryInstance.getLastDocNo)
 
 // Run server backend
 app.listen(PORT, () => {

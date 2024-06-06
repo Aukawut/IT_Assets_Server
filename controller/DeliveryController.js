@@ -70,14 +70,14 @@ class DeliveryController {
   }
 
   async getLastDocNo(req, res) {
-    const { serviceTag } = req.body;
+    const { sn } = req.params;
     try {
       const pool = await new sql.ConnectionPool(sqlConfig).connect();
 
       // หาเลข Delivery Code ล่าสุดแล้วจัด Format yyyymmdd-runningNo
       const results = await pool
         .request()
-        .input("sn", sql.NVarChar, serviceTag)
+        .input("sn", sql.NVarChar, sn)
         .query(
           `select a.BEFORE_DOC,LEFT(a.BEFORE_DOC,8)+'-'+a.LAST_DOC as LAST_DOC from (
             select top 1 [DocNo] as BEFORE_DOC ,
