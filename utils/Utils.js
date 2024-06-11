@@ -3,12 +3,10 @@ const { sqlConfig } = require("../config/config");
 const jwt = require("jsonwebtoken");
 const multer = require("multer");
 const path = require("path");
-const axios = require("axios");
-const { v4: uuidv4 } = require("uuid");
+const fs = require("fs");
 
 class Utils {
-  // Multer storage configuration
-
+  
   getToken(payload) {
     const secretKey = process.env.JWT_SECRET;
     const token = jwt.sign(payload, secretKey, {
@@ -40,9 +38,7 @@ class Utils {
 
     const getUser = async () => {
       try {
-        const poolDb = await new sql.ConnectionPool(
-          sqlConfig
-        ).connect(); // App03
+        const poolDb = await new sql.ConnectionPool(sqlConfig).connect(); // App03
         const response = await poolDb
           .request()
           .input("username", sql.NVarChar, username)
@@ -61,7 +57,6 @@ class Utils {
     const userData = await getUser(username);
 
     if (!roleData.err && !userData.err) {
-     
       const payload = {
         username: userData.data.AD_UserLogon,
         short_department: userData.data.UHR_Department,
@@ -71,100 +66,64 @@ class Utils {
         role: roleData.data.ROLE,
       };
 
-      return { err: false, payload:payload };
+      return { err: false, payload: payload };
     } else {
-      
       return { err: true, msg: "Error found user!" };
     }
   }
 
-  async sendFileToPHP(req, res) {
-    const uploadTophp = async () => {
-      await axios
-        .post(
-          `${process.env.SERVER_API_MOVE_FILE}/SharePictureAssetsIT/index.php`,
-          formData,
-          {
-            headers: {
-              "Content-Type": "multipart/form-data",
-            },
-          }
-        )
-        .then((response) => {
-          // Handle PHP backend response if needed
-          return true;
-        })
-        .catch((error) => {
-          console.error("Error uploading files to PHP backend:", error);
-          return false;
-        });
-    };
-
+  async uploadFileToFolder(req, res) {
     const serviceTag = req.body.serviceTag;
+    const images = req.files;
+    console.log(images);
+    if (!images || images.length === 0) {
+      console.error("No files uploaded");
+      return res.status(400).json({ err: true, msg: "No files uploaded" });
+    }
 
-    const images = req.files.images;
-
-    // Send files to PHP backend
-    const formData = new FormData();
-    for (let i = 0; i < images?.length; i++) {
-      const uuid = uuidv4(); //Unique
-
-      // สร้าง ฺBlob File
-      const fileBlob = new Blob([images[i].buffer], {
-        type: images[i].mimetype,
-      });
-
-      // Unique + Timestamp + นามสกุลไฟล์
-      const fileName = `${uuid}${Date.now()}${path.extname(
-        `${images[i].originalname}`
-      )}`;
-
-      // Append Key images[] ส่งไป PHP เพื่อทำการ Upload ไปที่ FileShare
-      formData.append("images[]", fileBlob, fileName);
-
-      // Save data to TBL_IMAGES_ASSETS
+    try {
       const pool = await new sql.ConnectionPool(sqlConfig).connect();
+      let inserted = 0;
+      for (const file of images) {
+        const fileName = file.filename;
+        await pool
+          .request()
+          .input("serviceTag", sql.NVarChar, serviceTag)
+          .input("imageName", sql.NVarChar, fileName)
+          .query(
+            "INSERT INTO TBL_IMAGES_ASSETS (SN_ASSETS, IMAGE_NAME) VALUES (@serviceTag, @imageName)"
+          );
+        inserted++;
+      }
 
-      await pool
-        .request()
-        .input("serviceTag", sql.NVarChar, serviceTag)
-        .input("imageName", sql.NVarChar, fileName)
-        .query(
-          `INSERT INTO TBL_IMAGES_ASSETS (SN_ASSETS,IMAGE_NAME) VALUES (@serviceTag,@imageName)`
-        )
-        .then(async (result, err) => {
-          if (err) {
-            pool.close();
-            return false;
-          } else {
-            pool.close();
-
-            await uploadTophp(); // send file to php server
-          }
-        })
-        .catch((err) => {
-          if (err) {
-            pool.close();
-            console.log(err);
-            return false;
-          }
-        });
+      if (inserted == images?.length) {
+        pool.close();
+        return { err: false, msg: "Files upload success!" };
+      } else {
+        pool.close();
+        console.log(new Date() + `Some files not upload!`);
+      }
+    } catch (err) {
+      console.error(err);
+      return { err: true, msg: "Database operation failed" };
     }
   }
+
   async removeImageInFolder(listImage) {
-    //send array
+    //image array
     try {
-      const response = await axios.post(
-        `${process.env.SERVER_API_MOVE_FILE}/SharePictureAssetsIT/unlinkImage.php`,
-        {
-          router: "unlinkImage",
-          images: listImage,
+      if (listImage?.length > 0) {
+        for (let index = 0; i < listImage?.length; i++) {
+          fs.unlink(
+            `../uploads/${listImage[index].IMAGE_NAME}`,
+            function (err) {
+              if (err) {
+                console.log(err);
+              }
+              console.log("file deleted successfully");
+            }
+          );
         }
-      );
-      if (!response.data.err) {
-        console.log("Unlink !");
-      } else {
-        console.log("Not Unlink !");
       }
     } catch (err) {
       cosole.log(err);
@@ -172,24 +131,18 @@ class Utils {
   }
 
   async removeImageInByFile(imageName) {
-    //send array
     try {
-      const response = await axios.post(
-        `${process.env.SERVER_API_MOVE_FILE}/SharePictureAssetsIT/unlinkImage.php`,
-        {
-          router: "unlinkImageByFile",
-          images: imageName,
+      fs.unlink(`../uploads/${imageName}`, function (err) {
+        if (err) {
+          console.log(err);
         }
-      );
-      if (!response.data.err) {
-        console.log("Unlink !");
-      } else {
-        console.log("Not Unlink !");
-      }
+        console.log("file deleted successfully");
+      });
     } catch (err) {
       cosole.log(err);
     }
   }
+
   async stockOut(partCode, dateInStock, amount) {
     const pool = await new sql.ConnectionPool(sqlConfig).connect(); // App
     let stockCuted = 0;

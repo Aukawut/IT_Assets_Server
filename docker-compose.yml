@@ -1,0 +1,26 @@
+version: '3'
+
+services:
+  api_it_assets:
+    image: api_it_assets
+    build:
+      context: .
+      dockerfile: ./Dockerfile
+    environment:
+      NODE_ENV: production
+      PORT: 5002
+      DB_USER: sa
+      DB_PWD: "p$th@2567"
+      DB_NAME: DB_ITINVENTORY
+      DB_SERVER: 10.144.1.87
+    restart: always 
+
+  nginxItAssets:
+    image: nginx:latest
+    volumes:
+      - ./conf.d:/etc/nginx/conf.d
+    depends_on:
+      - api_it_assets
+    ports:
+      - 5002:5002
+    restart: always 

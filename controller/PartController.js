@@ -3,6 +3,7 @@ const { sqlConfig } = require("../config/config");
 
 class PartController {
   async getAllPart(req, res) {
+    
     try {
       const pool = await new sql.ConnectionPool(sqlConfig).connect();
       const results = await pool

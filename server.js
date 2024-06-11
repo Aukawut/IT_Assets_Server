@@ -1,7 +1,11 @@
+// <----------- import Pakage -------------------->
 const express = require("express");
 const app = express();
 const cors = require("cors");
 const bodyParser = require("body-parser");
+const multer = require("multer") ;
+
+// <----------- import Controller -------------------->
 const AuthController = require("./controller/AuthController");
 const ComputerController = require("./controller/ComputerController");
 const UserController = require("./controller/UserController");
@@ -19,10 +23,23 @@ const DeliveryController = require("./controller/DeliveryController");
 const webTokenMiddleWare = require("./middleware/jwtMiddleWare") ;
 const fileUploadMiddleWare = require("./middleware/FileUploadMiddleware");
 
+
+const storage = multer.diskStorage({
+  destination: (req, file, cb) => {
+    console.log(file);
+    cb(null, "./uploads/");
+  },
+  filename: (req, file, cb) => {
+    cb(null, Date.now() + "-" + file.originalname);
+  },
+});
+
+
+
 app.use(cors());
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: true }));
-
+app.use('/uploads', express.static('uploads'))
 
 const AuthInstance = new AuthController() ;
 const ComputerInstance = new ComputerController() ;
@@ -38,12 +55,12 @@ const AccessoriesInstance = new AccessoriesController() ;
 const PartInstance = new PartController() ;
 const DeliveryInstance = new DeliveryController() ;
 
+const upload = multer({storage:storage})
 
 const JwtMiddleWareInstance = new webTokenMiddleWare() ;
 const FileUploadInstance = new fileUploadMiddleWare() ;
 
 const PORT = process.env.PORT;
-
 
 // Routes
 app.post("/login",AuthInstance.loginLdap);

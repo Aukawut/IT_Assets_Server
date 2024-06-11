@@ -1,58 +1,52 @@
 const multer = require("multer");
 const path = require("path");
-const axios = require("axios");
-const { v4: uuidv4 } = require('uuid'); ;
 
 class FileUploadMiddleware {
   // Multer storage configuration
 
-  upload = multer();
+  constructor() {
+    this.storage = multer.diskStorage({
+      destination: function (req, file, cb) {
+        cb(null, "uploads/");
+      },
+      filename: function (req, file, cb) {
+        req.body.fileName =
+          file.fieldname + "-" + Date.now() + path.extname(file.originalname);
+        cb(
+          null,
+          file.fieldname + "-" + Date.now() + path.extname(file.originalname)
+        );
+      },
+    });
 
-  cpUpload = this.upload.fields([{ name: "images", maxCount: 3 }]);
+    // Handle multiple files
+    this.cpUpload = multer({
+      storage: this.storage,
+      limits: {
+        fileSize: 2000000,
+      },
+      fileFilter: (req, file, cb) => {
+        if (file.mimetype === "image/jpeg" || file.mimetype === "image/png") {
+          cb(null, true);
+        } else {
+          cb(new Error("Invalid file type"));
+        }
+      },
+    }).array("images", 3);
+  }
 
   fileUploadMiddleware = (req, res, next) => {
-    let countErrorSize = 0;
-    let countErrorType = 0;
     this.cpUpload(req, res, function (err) {
-      if (!req.files || !req.files.images) {
-        next();
+      if (err) {
+        return res.json({
+          err: true,
+          msg: err,
+        });
       } else {
-        const images = req.files.images;
-  
-        for (let i = 0; i < images.length; i++) {
-          if (
-            path.extname(`${images[i].originalname}`) !== ".jpg" &&
-            path.extname(`${images[i].originalname}`) !== ".png"
-          ) {
-            countErrorType += 1;
-          }
-          if (images[i].size > 1024 * 1024) {
-            countErrorSize += 1;
-          }
-        }
-        if (countErrorSize !== 0) {
-          return res.json({
-            err: true,
-            msg: "Allowed upload files size less more 1 MB Only",
-          });
-        } else if (countErrorType !== 0) {
-          return res.json({
-            err: true,
-            msg: "Allowed upload files type .png,.jpg Only",
-          });
-        } else if (images.length > 3) {
-          return res.json({
-            err: true,
-            msg: "Allowed upload files less more 3 files only",
-          });
-        } else {
-           next() ;
-        }
+        next();
       }
     });
   };
-
-
 }
 
 module.exports = FileUploadMiddleware;
