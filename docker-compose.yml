@@ -6,6 +6,8 @@ services:
     build:
       context: .
       dockerfile: ./Dockerfile
+    volumes:
+      - ~/Desktop/app_storage/it_assets/uploads:/usr/src/app/uploads
     environment:
       NODE_ENV: production
       PORT: 5002
