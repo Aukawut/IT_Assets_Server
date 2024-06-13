@@ -10,7 +10,7 @@ services:
       NODE_ENV: production
       PORT: 5002
       DB_USER: sa
-      DB_PWD: "p$th@2567"
+      DB_PWD: 'p$th@2567'
       DB_NAME: DB_ITINVENTORY
       DB_SERVER: 10.144.1.87
     restart: always 

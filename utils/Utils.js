@@ -126,8 +126,9 @@ class Utils {
   }
 
   async removeImageInByFile(imageName) {
+    console.log(`../uploads/${imageName}`);
     try {
-      fs.unlink(`../uploads/${imageName}`, function (err) {
+      fs.unlink(`uploads/${imageName}`, function (err) {
         if (err) {
           console.log(err);
         }

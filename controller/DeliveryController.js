@@ -32,6 +32,38 @@ class DeliveryController {
       });
     }
   }
+  async printHistory(req, res) {
+    try {
+      const pool = await new sql.ConnectionPool(sqlConfig).connect();
+
+      const results = await pool
+        .request()
+        .query(`SELECT 'D'+CONVERT(VARCHAR,CREATED_AT,112)+'-'+RIGHT(REPLICATE('0', 3) + CAST(CAST([ORDER_NO] AS INT) + 1 AS VARCHAR(5)), 3) AS DOC_NO,
+	d.*,hr.[UHR_FullName_th] from [dbo].[TBL_DELIVERY_COMPUTER]d LEFT JOIN [DB_ITDATA].[dbo].[V_AD_LINK_HRS] hr ON d.FOR_USER COLLATE Thai_CI_AI = hr.[UHR_EmpCode] COLLATE Thai_CI_AI
+	ORDER BY d.CREATED_AT DESC`);
+      if (results && results?.recordset?.length > 0) {
+      
+        pool.close();
+        return res.json({
+          err: false,
+          results: results?.recordset,
+          status: "Ok",
+        });
+      } else {
+        pool.close();
+        return res.json({
+          err: false,
+          msg: "not found!",
+        });
+      }
+    } catch (err) {
+      console.log(err);
+      return res.json({
+        err: true,
+        msg: err,
+      });
+    }
+  }
   async deliveryComputer(req, res) {
     // กด Print Form จาก Web;
 
@@ -187,6 +219,7 @@ class DeliveryController {
         });
       }
     } catch (err) {
+      console.log(err);
       return res.json({
         err: true,
         msg: err,

@@ -12,7 +12,7 @@ class ComputerController {
       const response = await pool.request().query(
         `SELECT a.*,i.[IMAGE_NAME],b.NAME_STATUS,c.NAME_TYPE from  [dbo].V_ComputerMaster a LEFT JOIN TBL_ASSETS_STATUS b ON a.STATUS = b.ID_STATUS 
         LEFT JOIN [dbo].[TBL_ASSETS_TYPES] c ON a.TYPE = c.[ID_TYPE]
-	    	LEFT JOIN [dbo].[TBL_IMAGES_ASSETS] i ON a.[SN] = i.[SN_ASSETS]`
+	    	LEFT JOIN (SELECT COUNT(*) AS AMOUNT,SN_ASSETS,MIN(IMAGE_NAME) AS [IMAGE_NAME] FROM [dbo].[TBL_IMAGES_ASSETS] GROUP BY SN_ASSETS) i ON a.[SN] = i.[SN_ASSETS]`
       );
       if (response && response.recordset?.length > 0) {
         pool.close(); // ปิด Connection
@@ -519,7 +519,7 @@ class ComputerController {
   }
   async deleteImageByFile(req, res) {
     const { fileName } = req.body;
-    console.log(fileName);
+
     const pool = await new sql.ConnectionPool(sqlConfig).connect();
     const images = await pool
       .request()

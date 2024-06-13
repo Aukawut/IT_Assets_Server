@@ -130,6 +130,7 @@ app.delete("/sparePart/delete/:id",JwtMiddleWareInstance.adminAuthenticateJWT,Pa
 //Delivery Route
 app.get("/itemDelivery",JwtMiddleWareInstance?.adminAuthenticateJWT,DeliveryInstance.getEquipment)
 app.get("/documentDelivery",JwtMiddleWareInstance?.adminAuthenticateJWT,DeliveryInstance.getLastDocNo)
+app.get("/print/deliveryComputer/history",JwtMiddleWareInstance?.adminAuthenticateJWT,DeliveryInstance.printHistory)
 app.post("/print/form/computerDelivery",JwtMiddleWareInstance?.adminAuthenticateJWT,DeliveryInstance.insertDoc)
 
 // Run server backend
