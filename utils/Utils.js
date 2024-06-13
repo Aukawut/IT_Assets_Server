@@ -1,12 +1,10 @@
 const sql = require("mssql");
 const { sqlConfig } = require("../config/config");
 const jwt = require("jsonwebtoken");
-const multer = require("multer");
-const path = require("path");
+
 const fs = require("fs");
 
 class Utils {
-  
   getToken(payload) {
     const secretKey = process.env.JWT_SECRET;
     const token = jwt.sign(payload, secretKey, {
@@ -72,18 +70,15 @@ class Utils {
     }
   }
 
-  async uploadFileToFolder(req, res) {
+  async InsertImage(req, res) {
     const serviceTag = req.body.serviceTag;
     const images = req.files;
-    console.log(images);
-    if (!images || images.length === 0) {
-      console.error("No files uploaded");
-      return res.status(400).json({ err: true, msg: "No files uploaded" });
-    }
 
     try {
       const pool = await new sql.ConnectionPool(sqlConfig).connect();
       let inserted = 0;
+
+      // Loop
       for (const file of images) {
         const fileName = file.filename;
         await pool
@@ -91,21 +86,21 @@ class Utils {
           .input("serviceTag", sql.NVarChar, serviceTag)
           .input("imageName", sql.NVarChar, fileName)
           .query(
-            "INSERT INTO TBL_IMAGES_ASSETS (SN_ASSETS, IMAGE_NAME) VALUES (@serviceTag, @imageName)"
+            "INSERT INTO TBL_IMAGES_ASSETS ([SN_ASSETS], [IMAGE_NAME]) VALUES (@serviceTag, @imageName)"
           );
         inserted++;
       }
 
       if (inserted == images?.length) {
         pool.close();
-        return { err: false, msg: "Files upload success!" };
+        console.log({ err: false, msg: "Files upload success!" });
       } else {
         pool.close();
         console.log(new Date() + `Some files not upload!`);
       }
     } catch (err) {
       console.error(err);
-      return { err: true, msg: "Database operation failed" };
+      console.log({ err: true, msg: "Database operation failed" });
     }
   }
 

@@ -24,15 +24,6 @@ const webTokenMiddleWare = require("./middleware/jwtMiddleWare") ;
 const fileUploadMiddleWare = require("./middleware/FileUploadMiddleware");
 
 
-const storage = multer.diskStorage({
-  destination: (req, file, cb) => {
-    console.log(file);
-    cb(null, "./uploads/");
-  },
-  filename: (req, file, cb) => {
-    cb(null, Date.now() + "-" + file.originalname);
-  },
-});
 
 
 
@@ -55,7 +46,6 @@ const AccessoriesInstance = new AccessoriesController() ;
 const PartInstance = new PartController() ;
 const DeliveryInstance = new DeliveryController() ;
 
-const upload = multer({storage:storage})
 
 const JwtMiddleWareInstance = new webTokenMiddleWare() ;
 const FileUploadInstance = new fileUploadMiddleWare() ;
@@ -96,6 +86,7 @@ app.get("/department",JwtMiddleWareInstance.adminAuthenticateJWT,DepartmentInsta
 app.get("/assets",JwtMiddleWareInstance.adminAuthenticateJWT,AssetsInstance.getAllAssets)
 app.get("/assets/type",JwtMiddleWareInstance.adminAuthenticateJWT,AssetsInstance.getTypeAssets)
 app.post("/assets/add",JwtMiddleWareInstance.adminAuthenticateJWT,FileUploadInstance.fileUploadMiddleware,AssetsInstance.addAssets);
+app.put("/assets/update/:id",JwtMiddleWareInstance.adminAuthenticateJWT,FileUploadInstance.fileUploadMiddleware,AssetsInstance.updateAssets);
 
 //Status Assets Route
 app.get("/assets_status",JwtMiddleWareInstance.adminAuthenticateJWT,StatusInstance.getStatus)
@@ -138,7 +129,8 @@ app.delete("/sparePart/delete/:id",JwtMiddleWareInstance.adminAuthenticateJWT,Pa
 
 //Delivery Route
 app.get("/itemDelivery",JwtMiddleWareInstance?.adminAuthenticateJWT,DeliveryInstance.getEquipment)
-app.get("/documentDelivery/:sn",JwtMiddleWareInstance?.adminAuthenticateJWT,DeliveryInstance.getLastDocNo)
+app.get("/documentDelivery",JwtMiddleWareInstance?.adminAuthenticateJWT,DeliveryInstance.getLastDocNo)
+app.post("/print/form/computerDelivery",JwtMiddleWareInstance?.adminAuthenticateJWT,DeliveryInstance.insertDoc)
 
 // Run server backend
 app.listen(PORT, () => {

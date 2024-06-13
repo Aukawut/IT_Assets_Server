@@ -10,8 +10,9 @@ class ComputerController {
       const pool = await new sql.ConnectionPool(sqlConfig).connect();
 
       const response = await pool.request().query(
-        `select a.*,b.NAME_STATUS,c.NAME_TYPE from  [dbo].V_ComputerMaster a LEFT JOIN TBL_ASSETS_STATUS b ON a.STATUS = b.ID_STATUS 
-        LEFT JOIN [dbo].[TBL_ASSETS_TYPES] c ON a.TYPE = c.[ID_TYPE]`
+        `SELECT a.*,i.[IMAGE_NAME],b.NAME_STATUS,c.NAME_TYPE from  [dbo].V_ComputerMaster a LEFT JOIN TBL_ASSETS_STATUS b ON a.STATUS = b.ID_STATUS 
+        LEFT JOIN [dbo].[TBL_ASSETS_TYPES] c ON a.TYPE = c.[ID_TYPE]
+	    	LEFT JOIN [dbo].[TBL_IMAGES_ASSETS] i ON a.[SN] = i.[SN_ASSETS]`
       );
       if (response && response.recordset?.length > 0) {
         pool.close(); // ปิด Connection
@@ -152,179 +153,183 @@ class ComputerController {
   }
 
   async addComputer(req, res, next) {
+    const allImages  = req.files; // Array File
+    try {
+      const {
+        fixAssetsNo,
+        serviceTag,
+        computerName,
+        owner,
+        invoiceNo,
+        location,
+        department,
+        type,
+        price,
+        receiveDate,
+        status,
+        brand,
+        model,
+        cpu,
+        ram,
+        ramDetail,
+        storage,
+        storageDetail,
+        osSystem,
+        warrantyDate,
+        remark,
+        username,
+        performance,
+        admin,
+      } = req.body;
+      if (
+        !serviceTag ||
+        !computerName ||
+        !owner ||
+        !location ||
+        !department ||
+        !type ||
+        !price ||
+        !receiveDate ||
+        !status ||
+        !brand ||
+        !model ||
+        !cpu ||
+        !ram ||
+        !ramDetail ||
+        !storage ||
+        !storageDetail ||
+        !osSystem ||
+        !performance ||
+        !admin
+      ) {
+        return res.json({
+          err: true,
+          msg: "Please completed information !",
+        });
+      }
 
-    console.log(req.files); // Array File
+      const pool = await new sql.ConnectionPool(sqlConfig).connect();
 
-    // try {
-    //   const {
-    //     fixAssetsNo,
-    //     serviceTag,
-    //     computerName,
-    //     owner,
-    //     invoiceNo,
-    //     location,
-    //     department,
-    //     type,
-    //     price,
-    //     receiveDate,
-    //     status,
-    //     brand,
-    //     model,
-    //     cpu,
-    //     ram,
-    //     ramDetail,
-    //     storage,
-    //     storageDetail,
-    //     osSystem,
-    //     warrantyDate,
-    //     remark,
-    //     username,
-    //     performance,
-    //     admin,
-    //   } = req.body;
-    //   if (
-    //     !serviceTag ||
-    //     !computerName ||
-    //     !owner ||
-    //     !location ||
-    //     !department ||
-    //     !type ||
-    //     !price ||
-    //     !receiveDate ||
-    //     !status ||
-    //     !brand ||
-    //     !model ||
-    //     !cpu ||
-    //     !ram ||
-    //     !ramDetail ||
-    //     !storage ||
-    //     !storageDetail ||
-    //     !osSystem ||
-    //     !performance ||
-    //     !admin
-    //   ) {
-    //     return res.json({
-    //       err: true,
-    //       msg: "Please completed information !",
-    //     });
-    //   }
+      // เช็คซ้ำ
+      const resultsOld = await pool
+        .request()
+        .input("sn", sql.NVarChar, serviceTag)
+        .query("SELECT * FROM [dbo].[TBL_ASSETS_LISTS] WHERE SN = @sn");
+      if (resultsOld && resultsOld.recordset?.length > 0) {
+        console.log("Assets is duplicated!");
+        return res.json({
+          err: true,
+          msg: "Assets is duplicated!",
+        });
+      }
+      const covertToByte = (gb) => {
+        return parseFloat(gb) * 1073741824.0;
+      };
+      const saveAssets = await pool
+        .request()
+        .input("SN", sql.NVarChar, serviceTag) //PK
+        .input("COMPUTER_NAME", sql.NVarChar, computerName)
+        .input("MC_PERFORMANCE", sql.Int, parseInt(performance))
+        .input("OWNER", sql.NVarChar, owner)
+        .input("FIX_ASSET", sql.NVarChar, fixAssetsNo)
+        .input("INVOICE_NO", sql.NVarChar, invoiceNo)
+        .input("RECEIVE_DATE", sql.NVarChar, receiveDate)
+        .input("DEPART_MENT", sql.NVarChar, department)
+        .input("LOCATION", sql.NVarChar, location)
+        .input("USERNAME", sql.NVarChar, username)
+        .input("TYPE", sql.NVarChar, type)
+        .input("REMARK", sql.NVarChar, remark)
+        .input("STATUS", sql.NVarChar, status)
+        .input("CREATED_BY", sql.NVarChar, admin)
+        .input("EXPIRE_WARRANTY", sql.DateTime, warrantyDate)
+        .input("PRICE", sql.Decimal, price)
+        .query(
+          `INSERT INTO TBL_ASSETS_LISTS (SN,COMPUTER_NAME,MC_PERFORMANCE,OWNER,FIX_ASSET,INVOICE_NO,RECEIVE_DATE,DEPART_MENT,LOCATION,USERNAME,TYPE,REMARK,STATUS,CREATED_AT,CREATED_BY,EXPIRE_WARRANTY,PRICE)
+          VALUES (@SN,@COMPUTER_NAME,@MC_PERFORMANCE,@OWNER,@FIX_ASSET,@INVOICE_NO,@RECEIVE_DATE,@DEPART_MENT,@LOCATION,@USERNAME,@TYPE,@REMARK,@STATUS,GETDATE(),@CREATED_BY,@EXPIRE_WARRANTY,@PRICE)`
+        );
 
-    //   const pool = await new sql.ConnectionPool(sqlConfig).connect();
+      if (allImages?.length > 0) {
+        await UtilsInstance.InsertImage(req, res); // upload file to folder uploads
+      }
+      const oldSpec = await pool
+        .request()
+        .input("sn", sql.NVarChar, serviceTag)
+        .query(
+          `SELECT * FROM [DB_ITDATA].[dbo].[TBL_MasterComputer] WHERE [ServiceTag] = @sn`
+        );
 
-    //   // เช็คซ้ำ
-    //   const resultsOld = await pool
-    //     .request()
-    //     .input("sn", sql.NVarChar, serviceTag)
-    //     .query("SELECT * FROM [dbo].[TBL_ASSETS_LISTS] WHERE SN = @sn");
-    //   if (resultsOld && resultsOld.recordset?.length > 0) {
-    //     console.log("Assets is duplicated!");
-    //     return res.json({
-    //       err: true,
-    //       msg: "Assets is duplicated!",
-    //     });
-    //   }
-    //   const covertToByte = (gb) => {
-    //     return parseFloat(gb) * 1073741824.0;
-    //   };
-    //   const saveAssets = await pool
-    //     .request()
-    //     .input("SN", sql.NVarChar, serviceTag) //PK
-    //     .input("COMPUTER_NAME", sql.NVarChar, computerName)
-    //     .input("MC_PERFORMANCE", sql.Int, parseInt(performance))
-    //     .input("OWNER", sql.NVarChar, owner)
-    //     .input("FIX_ASSET", sql.NVarChar, fixAssetsNo)
-    //     .input("INVOICE_NO", sql.NVarChar, invoiceNo)
-    //     .input("RECEIVE_DATE", sql.NVarChar, receiveDate)
-    //     .input("DEPART_MENT", sql.NVarChar, department)
-    //     .input("LOCATION", sql.NVarChar, location)
-    //     .input("USERNAME", sql.NVarChar, username)
-    //     .input("TYPE", sql.NVarChar, type)
-    //     .input("REMARK", sql.NVarChar, remark)
-    //     .input("STATUS", sql.NVarChar, status)
-    //     .input("CREATED_BY", sql.NVarChar, admin)
-    //     .input("EXPIRE_WARRANTY", sql.DateTime, warrantyDate)
-    //     .input("PRICE", sql.Decimal, price)
-    //     .query(
-    //       `INSERT INTO TBL_ASSETS_LISTS (SN,COMPUTER_NAME,MC_PERFORMANCE,OWNER,FIX_ASSET,INVOICE_NO,RECEIVE_DATE,DEPART_MENT,LOCATION,USERNAME,TYPE,REMARK,STATUS,CREATED_AT,CREATED_BY,EXPIRE_WARRANTY,PRICE)
-    //       VALUES (@SN,@COMPUTER_NAME,@MC_PERFORMANCE,@OWNER,@FIX_ASSET,@INVOICE_NO,@RECEIVE_DATE,@DEPART_MENT,@LOCATION,@USERNAME,@TYPE,@REMARK,@STATUS,GETDATE(),@CREATED_BY,@EXPIRE_WARRANTY,@PRICE)`
-    //     );
-      await UtilsInstance.uploadFileToFolder(req, res); // upload file
+      // ถ้ามีข้อมูล Spec Computer อยู่แล้วให้ทำการอัพเดท
+      if (oldSpec && oldSpec?.recordset?.length > 0) {
+        const updateSpec = await pool
+          .request()
+          .input("SN", sql.NVarChar, serviceTag) //FK
+          .input("RAM", sql.BigInt, covertToByte(ram))
+          .input("CPU", sql.NVarChar, cpu)
+          .input("STORAGE", sql.BigInt, covertToByte(storage))
+          .input("MODEL", sql.NVarChar, model)
+          .input("OS_SYSTEM", sql.NVarChar, osSystem)
+          .input("BRANDE", sql.NVarChar, brand)
+          .input("RAM_DETAILS", sql.NVarChar, ramDetail)
+          .input("STORAGE_DETAILS", sql.NVarChar, storageDetail)
+          .query(
+            `UPDATE [DB_ITDATA].[dbo].[TBL_MasterComputer] SET [ServiceTag] = @SN,
+            [Ram] = @RAM,[CPU] = @CPU,[HDD] = @STORAGE,[Model] = @MODEL,[OS] = @OS_SYSTEM,
+            [Brand] = @BRANDE,[RamDetails] = @RAM_DETAILS,[HDDDetails] = @STORAGE_DETAILS
+            WHERE [ServiceTag] = @SN`
+          );
+        if (updateSpec && updateSpec?.rowsAffected[0] > 0) {
+          return res.json({
+            err: false,
+            msg: "Added!",
+            status: "Ok",
+          });
+        }
+      } else {
+        const saveSpec = await pool
+          .request()
+          .input("SN", sql.NVarChar, serviceTag) //FK
+          .input("RAM", sql.BigInt, covertToByte(ram))
+          .input("CPU", sql.NVarChar, cpu)
+          .input("STORAGE", sql.BigInt, covertToByte(storage))
+          .input("MODEL", sql.NVarChar, model)
+          .input("OS_SYSTEM", sql.NVarChar, osSystem)
+          .input("BRANDE", sql.NVarChar, brand)
+          .input("RAM_DETAILS", sql.NVarChar, ramDetail)
+          .input("STORAGE_DETAILS", sql.NVarChar, storageDetail)
+          .input("COMPUTER_NAME", sql.NVarChar, computerName)
+          .query(
+            `INSERT INTO [DB_ITDATA].[dbo].[TBL_MasterComputer] ([ServiceTag],[Ram],[CPU],[HDD],[Model],[OS],[Brand],[RamDetails],[HDDDetails],[ComputerName])
+          VALUES (@SN,@RAM,@CPU,@STORAGE,@MODEL,@OS_SYSTEM,@BRANDE,@RAM_DETAILS,@STORAGE_DETAILS,@COMPUTER_NAME)`
+          );
 
-    //   const oldSpec = await pool
-    //     .request()
-    //     .input("sn", sql.NVarChar, serviceTag)
-    //     .query(
-    //       `SELECT * FROM [DB_ITDATA].[dbo].[TBL_MasterComputer] WHERE [ServiceTag] = @sn`
-    //     );
-
-    //   // ถ้ามีข้อมูล Spec Computer อยู่แล้วให้ทำการอัพเดท
-    //   if (oldSpec && oldSpec?.recordset?.length > 0) {
-    //     const updateSpec = await pool
-    //       .request()
-    //       .input("SN", sql.NVarChar, serviceTag) //FK
-    //       .input("RAM", sql.BigInt, covertToByte(ram))
-    //       .input("CPU", sql.NVarChar, cpu)
-    //       .input("STORAGE", sql.BigInt, covertToByte(storage))
-    //       .input("MODEL", sql.NVarChar, model)
-    //       .input("OS_SYSTEM", sql.NVarChar, osSystem)
-    //       .input("BRANDE", sql.NVarChar, brand)
-    //       .input("RAM_DETAILS", sql.NVarChar, ramDetail)
-    //       .input("STORAGE_DETAILS", sql.NVarChar, storageDetail)
-    //       .query(
-    //         `UPDATE [DB_ITDATA].[dbo].[TBL_MasterComputer] SET [ServiceTag] = @SN,
-    //         [Ram] = @RAM,[CPU] = @CPU,[HDD] = @STORAGE,[Model] = @MODEL,[OS] = @OS_SYSTEM,
-    //         [Brand] = @BRANDE,[RamDetails] = @RAM_DETAILS,[HDDDetails] = @STORAGE_DETAILS
-    //         WHERE [ServiceTag] = @SN`
-    //       );
-    //     if (updateSpec && updateSpec?.rowsAffected[0] > 0) {
-    //       return res.json({
-    //         err: false,
-    //         msg: "Added!",
-    //         status: "Ok",
-    //       });
-    //     }
-    //   } else {
-    //     const saveSpec = await pool
-    //       .request()
-    //       .input("SN", sql.NVarChar, serviceTag) //FK
-    //       .input("RAM", sql.BigInt, covertToByte(ram))
-    //       .input("CPU", sql.NVarChar, cpu)
-    //       .input("STORAGE", sql.BigInt, covertToByte(storage))
-    //       .input("MODEL", sql.NVarChar, model)
-    //       .input("OS_SYSTEM", sql.NVarChar, osSystem)
-    //       .input("BRANDE", sql.NVarChar, brand)
-    //       .input("RAM_DETAILS", sql.NVarChar, ramDetail)
-    //       .input("STORAGE_DETAILS", sql.NVarChar, storageDetail)
-    //       .input("COMPUTER_NAME", sql.NVarChar, computerName)
-    //       .query(
-    //         `INSERT INTO [DB_ITDATA].[dbo].[TBL_MasterComputer] ([ServiceTag],[Ram],[CPU],[HDD],[Model],[OS],[Brand],[RamDetails],[HDDDetails],[ComputerName])
-    //       VALUES (@SN,@RAM,@CPU,@STORAGE,@MODEL,@OS_SYSTEM,@BRANDE,@RAM_DETAILS,@STORAGE_DETAILS,@COMPUTER_NAME)`
-    //       );
-
-    //     if (
-    //       saveAssets &&
-    //       saveAssets.rowsAffected[0] > 0 &&
-    //       saveSpec &&
-    //       saveSpec.rowsAffected[0] > 0
-    //     ) {
-    //       return res.json({
-    //         err: false,
-    //         msg: "Added!",
-    //         status: "Ok",
-    //       });
-    //     }
-    //   }
-    // } catch (err) {
-    //   console.log(err);
-    //   return res.json({
-    //     err: true,
-    //     msg: err,
-    //   });
-    // }
+        if (
+          saveAssets &&
+          saveAssets.rowsAffected[0] > 0 &&
+          saveSpec &&
+          saveSpec.rowsAffected[0] > 0
+        ) {
+          return res.json({
+            err: false,
+            msg: "Added!",
+            status: "Ok",
+          });
+        }
+      }
+    } catch (err) {
+      console.log(err);
+      return res.json({
+        err: true,
+        msg: err,
+      });
+    }
   }
 
   async updateComputer(req, res) {
     const { id } = req.params;
+    const allImages = req.files ;
+    const covertToByte = (gb) => {
+      return parseFloat(gb) * 1073741824.0;
+    };
 
     const {
       fixAssetsNo,
@@ -386,6 +391,8 @@ class ComputerController {
       .request()
       .input("id", sql.NVarChar, id)
       .query("SELECT * FROM [dbo].[TBL_ASSETS_LISTS] WHERE Id = @id");
+
+  
     if (oldComputer && oldComputer.recordset?.length > 0) {
       const oldServiceTag = oldComputer.recordset[0]?.SN;
 
@@ -432,12 +439,16 @@ class ComputerController {
           PRICE = @PRICE,UPDATED_BY = @admin WHERE Id = @id`
         );
 
+        if(allImages?.length > 0) {
+          await UtilsInstance.InsertImage(req,res) // Save image
+        }
+
       const updateSpec = await pool
         .request()
         .input("SN", sql.NVarChar, serviceTag) //FK
-        .input("RAM", sql.BigInt, ram)
-        .input("CPU", sql.BigInt, cpu)
-        .input("STORAGE", sql.NVarChar, storage)
+        .input("RAM", sql.BigInt, covertToByte(ram))
+        .input("CPU", sql.NVarChar, cpu)
+        .input("STORAGE", sql.BigInt, covertToByte(storage))
         .input("MODEL", sql.NVarChar, model)
         .input("OS_SYSTEM", sql.NVarChar, osSystem)
         .input("BRANDE", sql.NVarChar, brand)
@@ -456,8 +467,7 @@ class ComputerController {
         updateSpec &&
         updateSpec.rowsAffected[0] > 0
       ) {
-        await UtilsInstance.uploadFileToFolder(req, res); // upload file
-
+    
         return res.json({
           err: false,
           msg: "Updated!",
