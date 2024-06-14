@@ -3,6 +3,7 @@ const { sqlConfig } = require("../config/config");
 const { v4: uuidv4 } = require("uuid");
 const Utils = require("../utils/Utils");
 const UtilsInstance = new Utils();
+const moment = require("moment");
 
 class AccessoriesController {
   async getAccessories(req, res) {
@@ -114,7 +115,7 @@ class AccessoriesController {
         .input("PRICES", sql.Decimal, price)
         .input("REMARK", sql.NVarChar, remark)
         .input("SUPPLIER_CODE", sql.NVarChar, supplier)
-        .input("DATE_STOCKIN", sql.DateTime, dateReceive)
+        .input("DATE_STOCKIN", sql.DateTime, moment(dateReceive).add(7,'hours').format('YYYY-MM-DD HH:mm'))
         .input("INVOICE_NO", sql.NVarChar, invoiceNo)
         .input("CREATED_BY", sql.NVarChar, admin)
         .query(`INSERT INTO TBL_STOCK_IT (ITEM_CODE,GROUP_PART,PART_CODE,BALANCE,RECEIVE,SUPPLY,REMAIN,UNITS,PRICES,REMARK,SUPPLIER_CODE,DATE_STOCKIN,INVOICE_NO,CREATED_BY) 
@@ -124,7 +125,7 @@ class AccessoriesController {
         // Save Tag
         const insert = await pool
           .request()
-          .input("DATE_STOCKIN", sql.DateTime, dateReceive)
+          .input("DATE_STOCKIN", sql.DateTime, moment(dateReceive).add(7,'hours').format('YYYY-MM-DD HH:mm'))
           .input("PART_CODE", sql.NVarChar, partCode)
           .input("TAG_GENARATED", sql.NVarChar, "N")
           .query(
@@ -211,7 +212,7 @@ class AccessoriesController {
           .input("PRICES", sql.Decimal, price)
           .input("REMARK", sql.NVarChar, remark)
           .input("SUPPLIER_CODE", sql.NVarChar, supplier)
-          .input("DATE_STOCKIN", sql.DateTime, dateReceive)
+          .input("DATE_STOCKIN", sql.DateTime, moment(dateReceive).add(7,'hours').format('YYYY-MM-DD HH:mm'))
           .input("INVOICE_NO", sql.NVarChar, invoiceNo)
           .input("UPDATED_BY", sql.NVarChar, admin)
           .input("id", sql.Int, id)
@@ -244,9 +245,10 @@ class AccessoriesController {
   }
 
   async pickUpAccessories(req, res) {
-    const { amount } = req.body;
+    const { amount,remark } = req.body;
     const { partCode } = req.params;
-
+    console.log(req.body);
+    console.log(partCode);
     try {
       const pool = await new sql.ConnectionPool(sqlConfig).connect();
       const response = await pool
@@ -268,15 +270,16 @@ class AccessoriesController {
         const idArray = response.recordset?.map((x) => x.Id);
         const dateArray = response.recordset?.map((x) => x.DATE_STOCKIN);
         const strId = idArray.join(","); // [1,2,3] => 1,2,3->string
-        const pool = await new sql.ConnectionPool(sqlConfig).connect();
+
         const updateStock = await pool
           .request()
           .input("uuid", sql.NVarChar, uuidv4())
+          .input("remark", sql.VarChar,remark)
           .query(
-            `UPDATE TBL_ACCESSORIES_TAGS SET TAG_GENARATED = 'Y',UUID_PICK = @uuid ,LAST_PICKTAG = GETDATE() WHERE Id in (${strId})`
+            `UPDATE TBL_ACCESSORIES_TAGS SET TAG_GENARATED = 'Y',REMARK = @remark,UUID_PICK = @uuid ,LAST_PICKTAG = GETDATE() WHERE Id in (${strId})`
           );
 
-        await UtilsInstance.stockOut(partCode, dateArray, amount); // ตัด FIFO
+         await UtilsInstance.stockOut(partCode, dateArray, amount); // ตัด FIFO
 
         if (updateStock && updateStock.rowsAffected[0] > 0) {
           return res.json({

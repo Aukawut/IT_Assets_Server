@@ -141,6 +141,7 @@ class Utils {
 
   async stockOut(partCode, dateInStock, amount) {
     const pool = await new sql.ConnectionPool(sqlConfig).connect(); // App
+    console.log(dateInStock);
     let stockCuted = 0;
     // dateInStock = array ;
 
@@ -170,9 +171,9 @@ class Utils {
           );
       }
     }
-    // จบ Loop
+  // จบ Loop
 
-    // ถ้า Loop ตัด Stock เสร็จ และที่เบิกมา //FIFO
+     // ถ้า Loop ตัด Stock เสร็จ และที่เบิกมา //FIFO
     if (Number(stockCuted) === Number(amount)) {
       console.log("Ok");
     }
