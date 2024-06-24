@@ -29,13 +29,15 @@ class PartController {
       const pool = await new sql.ConnectionPool(sqlConfig).connect();
       const results = await pool.request().query(`WITH CTE_SumStock AS (
           SELECT a.[PART_CODE],
-                SUM([RECEIVE]) as[RECEIVE]
-                ,SUM([SUPPLY]) as [SUPPLY]
-                ,SUM([REMAIN]) as [REMAIN] FROM [dbo].[TBL_STOCK_IT]a GROUP BY PART_CODE)
-          
-          SELECT p.*,c.RECEIVE,c.REMAIN,c.SUPPLY,ac.GROUP_NAME FROM [dbo].[TBL_PART_MASTER]p 
+          SUM([RECEIVE]) as[RECEIVE],SUM([SUPPLY]) as [SUPPLY],SUM([REMAIN]) as [REMAIN] FROM [dbo].[TBL_STOCK_IT]a GROUP BY PART_CODE)
+          SELECT p.*,ISNULL(c.RECEIVE,0.00) AS [RECEIVE],ISNULL(c.REMAIN,0.00) as [REMAIN],ISNULL(c.SUPPLY,0.00) as [SUPPLY],
+		      ISNULL(vp.[VALUE_RECEIVE],0.00) as [VALUE_RECEIVE], 
+		      ISNULL(vp.[VALUE_SUPPLY],0.00) as [VALUE_SUPPLY],
+		      ISNULL(vp.[VALUE_REMAIN],0.00) as [VALUE_REMAIN],ac.GROUP_NAME FROM [dbo].[TBL_PART_MASTER]p 
           LEFT JOIN CTE_SumStock c ON p.PART_CODE = c.PART_CODE 
-          LEFT JOIN [dbo].[TBL_GROUP_ACCESS]ac ON p.PART_GROUP = ac.SHORT_GROUP ORDER BY p.PART_CODE ASC`);
+          LEFT JOIN [dbo].[TBL_GROUP_ACCESS]ac ON p.PART_GROUP = ac.SHORT_GROUP
+		      LEFT JOIN [dbo].V_ValueOfITSparePart vp ON c.PART_CODE = vp.PART_CODE
+		      ORDER BY p.PART_CODE ASC`);
       if (results && results.recordset?.length > 0) {
         return res.json({
           err: false,
