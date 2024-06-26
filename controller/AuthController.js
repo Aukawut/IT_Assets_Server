@@ -81,7 +81,7 @@ class AuthController {
                       // Loop Create New Key Of Array
                       for (let i = 0; i < resultLdap?.attributes.length; i++) {
                         const key = resultLdap?.attributes[i];
-                        newArray.push({
+                        newArrayKey.push({
                           field: key.type,
                           value: key.values[0] !== "" ? key.values[0] : "",
                         });
